@@ -12,3 +12,4 @@ model
 .project
 .classpath
 /.metadata/
+/org.goon.domainmodel/bin
