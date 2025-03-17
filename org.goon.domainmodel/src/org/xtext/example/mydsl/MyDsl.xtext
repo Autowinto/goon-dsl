@@ -45,9 +45,8 @@ IPConstraint:
 	GeneralConstraint | Comparator TermIP
 ;
 
-
 GeneralConstraint:
-	'requires' ID | 'optional'
+	'requires' ref=[Entry] | 'optional'
 ;
 
 Comparator:
@@ -62,7 +61,6 @@ TermIP:
 	INT'.'INT'.'INT'.'INT | 'localhost'
 ;
 
-
 Entry: 
-	key=ID':' (type=Type | '{' entries+=Entry* '}')
+	name=ID':' (type=Type | '{' entries+=Entry* '}')
 ;
