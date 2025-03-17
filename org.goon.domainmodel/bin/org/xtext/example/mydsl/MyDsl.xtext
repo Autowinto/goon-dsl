@@ -2,10 +2,67 @@ grammar org.xtext.example.mydsl.MyDsl with org.eclipse.xtext.common.Terminals
 
 generate myDsl "http://www.xtext.org/example/mydsl/MyDsl"
 
-Model:
-	greetings+=Greeting*;
-	
-Greeting:
-	'Hello' name=ID '!';
+Config:
+    entries+=Entry*;
+    
+Type: 
+	IntType|StringType|BoolType|IPType
+;
+
+IntType:
+	'Int'(',' constraints+=IntConstraint)*
+;
+
+StringType:
+	'String'(',' constraints+=StringConstraint)*
+;
+
+BoolType:
+	'Bool'(',' constraints+=BoolConstraint)*
+;
+
+IPType:
+	'IP'(',' constraints+=IPConstraint)*
+;
+
+StringConstraint:
+	Comparator (STRING|INT)|('prefix'|'suffix') STRING | CaseType | GeneralConstraint 
+;
+
+CaseType:
+	caseType=('camel'|'snake'|'pascal')
+;
+
+IntConstraint:
+	Comparator INT | GeneralConstraint
+;
+
+BoolConstraint:
+	(TermBool | GeneralConstraint)
+;
+
+IPConstraint:
+	GeneralConstraint | Comparator TermIP
+;
 
 
+GeneralConstraint:
+	'requires' ID | 'optional'
+;
+
+Comparator:
+	comparator=('<' | '>' | '<=' | '>=' |'!'|'=')
+;
+
+TermBool:
+	value='true' | 'false'
+;
+
+TermIP:
+	INT'.'INT'.'INT'.'INT | 'localhost'
+;
+
+
+Entry: 
+	key=ID':' (type=Type | '{' entries+=Entry* '}')
+;
