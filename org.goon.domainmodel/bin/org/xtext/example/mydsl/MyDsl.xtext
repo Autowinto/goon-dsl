@@ -38,7 +38,7 @@ IntConstraint:
 ;
 
 BoolConstraint:
-	(TermBool | GeneralConstraint)
+	(Comparator TermBool | GeneralConstraint)
 ;
 
 IPConstraint:
@@ -55,7 +55,7 @@ Comparator:
 ;
 
 TermBool:
-	value='true' | 'false'
+	'true' | 'false'
 ;
 
 TermIP:
