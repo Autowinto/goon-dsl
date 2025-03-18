@@ -3,64 +3,48 @@ grammar org.xtext.example.mydsl.MyDsl with org.eclipse.xtext.common.Terminals
 generate myDsl "http://www.xtext.org/example/mydsl/MyDsl"
 
 Config:
-    entries+=Entry*;
+    entries+=Entry*
+;
     
-Type: 
-	IntType|StringType|BoolType|IPType
+Entry: 
+	name=ID':' (type=Exp | '{' entries+=Entry* '}')
+;    
+    
+
+Exp: 
+	Constraint ({And.left=current} '&&' right=Exp)?
+;
+    
+And:
+	left=(Constraint) ('&&' right=Exp)?
 ;
 
-IntType:
-	'Int'(',' constraints+=IntConstraint)*
-;
 
-StringType:
-	'String'(',' constraints+=StringConstraint)*
-;
-
-BoolType:
-	'Bool'(',' constraints+=BoolConstraint)*
-;
-
-IPType:
-	'IP'(',' constraints+=IPConstraint)*
-;
-
-StringConstraint:
-	Comparator (STRING|INT)|('prefix'|'suffix') STRING | CaseType | GeneralConstraint 
-;
-
-CaseType:
-	caseType=('camel'|'snake'|'pascal')
+Constraint:
+    (IntConstraint | StringConstraint | BoolConstraint | IPConstraint | Requirement)
 ;
 
 IntConstraint:
-	Comparator INT | GeneralConstraint
+    'Int' ('<' | '>' | '<=' | '>=' | '!=' | '=') value=INT
+;
+
+StringConstraint:
+    'String' ('!=' | '=') value=STRING
 ;
 
 BoolConstraint:
-	(Comparator TermBool | GeneralConstraint)
+    'Bool' ('!=' | '=') value=('true' | 'false')
 ;
 
 IPConstraint:
-	GeneralConstraint | Comparator TermIP
+    'IP' ('<' | '>' | '<=' | '>=' | '!=' | '=') value=TermIP
 ;
 
-GeneralConstraint:
-	'requires' ref=[Entry] | 'optional'
-;
-
-Comparator:
-	comparator=('<' | '>' | '<=' | '>=' |'!'|'=')
-;
-
-TermBool:
-	'true' | 'false'
-;
 
 TermIP:
 	INT'.'INT'.'INT'.'INT | 'localhost'
 ;
 
-Entry: 
-	name=ID':' (type=Type | '{' entries+=Entry* '}')
+Requirement:
+	'requires' ref=[Entry]
 ;
