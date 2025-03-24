@@ -9,9 +9,13 @@ import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
 import org.xtext.example.mydsl.myDsl.Config
 import org.xtext.example.mydsl.myDsl.Entry
+import org.xtext.example.mydsl.myDsl.Exp
+import org.xtext.example.mydsl.myDsl.StringConstraint
+import org.xtext.example.mydsl.myDsl.IntConstraint
+import org.xtext.example.mydsl.myDsl.BoolConstraint
+import org.xtext.example.mydsl.myDsl.IPConstraint
+import org.xtext.example.mydsl.myDsl.And
 
-import java.util.HashMap
-import java.util.Map
 
 /**
  * Generates code from your model files on save.
@@ -37,13 +41,14 @@ class MyDslGenerator extends AbstractGenerator {
     	import java.io.IOException;
     	
     	public class «root.name»Tests {
+    		// Assuming File is named config.json
+    		File jsonFile = new File("config.json");
+    		ObjectMapper objectMapper = new ObjectMapper();
+    		JsonNode rootNode = objectMapper.readTree(jsonFile);
     		
     		@Test
     		public void testConfigJsonStructure() throws IOException {
-    			// Assuming File is named config.json
-    			File jsonFile = new File("config.json");
-    			ObjectMapper objectMapper = new ObjectMapper();
-    			JsonNode rootNode = objectMapper.readTree(jsonFile);
+    			
     			
     			assertNotNull(rootNode);
     			«FOR entry : root.entries»
@@ -57,13 +62,15 @@ class MyDslGenerator extends AbstractGenerator {
     		}
     		
     		«FOR entry : root.entries»
-    		    // Test for entry: «entry.name»
-    		    @Test
-    		    def void «entry.name»Test() {
-    		        assertEquals("Lorem", "«entry.name»");
-    		    }
-    		    // Recursively generate tests for subentries
-    		    «HelperClass.generateTests(entry)»
+    		    «IF !entry.entries.empty»
+    		    	«HelperClass.generateTests(entry)»
+    		    «ELSE»
+    		    	// Test for entry:«entry.name»
+    		    	@Test
+    		    	def void «entry.name»Test() {
+    		    		«HelperClass.compileExp(entry.type, entry, entry)»;
+    		    	}
+    		    «ENDIF»
     		«ENDFOR»
     		
     	}
@@ -83,15 +90,35 @@ class HelperClass {
     '''
     static def generateTests(Entry entry) '''
         «FOR subEntry : entry.entries»
-            // Test for entry: «subEntry.name»
-            @Test
-            def void «subEntry.name»Test() {
-                assertEquals("Lorem", "«subEntry.name»");
-            }
-            «generateTests(subEntry)»
+        	«IF !subEntry.entries.empty»
+        		«generateTests(subEntry)»
+        	«ELSE»
+        		// Test for entry: «subEntry.name»
+        		@Test
+        		def void «subEntry.name»Test() {
+        			«subEntry.type.compileExp(subEntry, entry)»;
+        		}
+        	«ENDIF»
         «ENDFOR»
     '''
-    
+   
+   static def String compileExp(Exp exp, Entry entry, Entry parentEntry) {
+   	
+		if (exp instanceof And) {
+    		return exp.left.compileExp(entry, parentEntry) + "\n" + exp.right.compileExp(entry, parentEntry);
+		} else if (exp instanceof StringConstraint) {
+			if(exp.constraint.equals('=')){
+				return "assertTrue(" + parentEntry.name+".get("+"\""+entry.name+"\""+").equals("+"\""+exp.value+"\"))";
+			} else if(exp.constraint.equals('!=')){
+				return "assertTrue(!" + parentEntry.name+".get("+"\""+entry.name+"\""+").equals("+"\""+exp.value+"\"))";
+			}
+		} else if (exp instanceof IntConstraint) {
+			return "assertTrue("+parentEntry.name+".get("+"\""+entry.name+"\""+")"+ exp.constraint +exp.value +")";
+			
+		}
+	} 
 }
+
+
     
    

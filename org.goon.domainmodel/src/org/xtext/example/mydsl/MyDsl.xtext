@@ -24,19 +24,19 @@ Constraint:
 ;
 
 IntConstraint:
-    'Int' ('<' | '>' | '<=' | '>=' | '!=' | '=') value=INT
+    'Int' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=INT)?
 ;
 
 StringConstraint:
-    'String' ('!=' | '=') value=STRING
+    'String' (constraint=('!=' | '=') value=STRING)?
 ;
 
 BoolConstraint:
-    'Bool' ('!=' | '=') value=('true' | 'false')
+    'Bool' (constraint=('!=' | '=') value=('true' | 'false'))?
 ;
 
 IPConstraint:
-    'IP' ('<' | '>' | '<=' | '>=' | '!=' | '=') value=TermIP
+    'IP' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=TermIP)?
 ;
 
 
