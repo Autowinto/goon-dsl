@@ -7,6 +7,11 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.generator.AbstractGenerator
 import org.eclipse.xtext.generator.IFileSystemAccess2
 import org.eclipse.xtext.generator.IGeneratorContext
+import org.xtext.example.mydsl.myDsl.Config
+import org.xtext.example.mydsl.myDsl.Entry
+
+import java.util.HashMap
+import java.util.Map
 
 /**
  * Generates code from your model files on save.
@@ -14,12 +19,79 @@ import org.eclipse.xtext.generator.IGeneratorContext
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class MyDslGenerator extends AbstractGenerator {
-
+	
+	
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-//		fsa.generateFile('greetings.txt', 'People to greet: ' + 
-//			resource.allContents
-//				.filter(Greeting)
-//				.map[name]
-//				.join(', '))
-	}
+		
+        var root = resource.allContents.toIterable.filter(Config).get(0)
+	    fsa.generateFile("configTests/"+root.name+".java", root.compile())
+    }
+    
+    def compile(Config root)'''
+    	import com.fasterxml.jackson.databind.JsonNode;
+    	import com.fasterxml.jackson.databind.ObjectMapper;
+    	import org.junit.jupiter.api.Test;
+    	import static org.junit.jupiter.api.Assertions.*;
+    	
+    	import java.io.File;
+    	import java.io.IOException;
+    	
+    	public class «root.name»Tests {
+    		
+    		@Test
+    		public void testConfigJsonStructure() throws IOException {
+    			// Assuming File is named config.json
+    			File jsonFile = new File("config.json");
+    			ObjectMapper objectMapper = new ObjectMapper();
+    			JsonNode rootNode = objectMapper.readTree(jsonFile);
+    			
+    			assertNotNull(rootNode);
+    			«FOR entry : root.entries»
+    			    assertTrue(rootNode.has("«entry.name»"));
+    			    «IF !entry.entries.empty»
+    			        JsonNode «entry.name» = rootNode.get("«entry.name»");
+    			        «HelperClass.generateAssertions(entry, entry.name)»
+    			    «ENDIF»
+    			«ENDFOR»
+    			
+    		}
+    		
+    		«FOR entry : root.entries»
+    		    // Test for entry: «entry.name»
+    		    @Test
+    		    def void «entry.name»Test() {
+    		        assertEquals("Lorem", "«entry.name»");
+    		    }
+    		    // Recursively generate tests for subentries
+    		    «HelperClass.generateTests(entry)»
+    		«ENDFOR»
+    		
+    	}
+    '''
+    
 }
+    
+class HelperClass {
+    static def generateAssertions(Entry entry, String parentName) '''
+        «FOR subEntry : entry.entries»
+            assertTrue(«parentName».has("«subEntry.name»"));
+            «IF !subEntry.entries.empty»
+                JsonNode «subEntry.name» = «parentName».get("«subEntry.name»");
+                «generateAssertions(subEntry, subEntry.name)»
+            «ENDIF»
+        «ENDFOR»
+    '''
+    static def generateTests(Entry entry) '''
+        «FOR subEntry : entry.entries»
+            // Test for entry: «subEntry.name»
+            @Test
+            def void «subEntry.name»Test() {
+                assertEquals("Lorem", "«subEntry.name»");
+            }
+            «generateTests(subEntry)»
+        «ENDFOR»
+    '''
+    
+}
+    
+   

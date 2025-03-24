@@ -3,7 +3,7 @@ grammar org.xtext.example.mydsl.MyDsl with org.eclipse.xtext.common.Terminals
 generate myDsl "http://www.xtext.org/example/mydsl/MyDsl"
 
 Config:
-    entries+=Entry*
+    'config' name=ID  entries+=Entry*
 ;
     
 Entry: 
@@ -18,7 +18,6 @@ Exp:
 And:
 	left=(Constraint) ('&&' right=Exp)?
 ;
-
 
 Constraint:
     (IntConstraint | StringConstraint | BoolConstraint | IPConstraint | Requirement)
