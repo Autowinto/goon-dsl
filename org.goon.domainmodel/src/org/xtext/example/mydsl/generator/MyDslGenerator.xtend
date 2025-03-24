@@ -42,9 +42,16 @@ class MyDslGenerator extends AbstractGenerator {
     	
     	public class «root.name»Tests {
     		// Assuming File is named config.json
-    		File jsonFile = new File("config.json");
+    		File jsonFile = new File("src/config.json");
     		ObjectMapper objectMapper = new ObjectMapper();
-    		JsonNode rootNode = objectMapper.readTree(jsonFile);
+    		JsonNode rootNode;
+    		{
+    			try {
+    				rootNode = objectMapper.readTree(jsonFile);
+    			} catch (IOException e) {
+    				throw new RuntimeException(e);
+    			}
+    		}
     		
     		@Test
     		public void testConfigJsonStructure() throws IOException {
@@ -58,21 +65,16 @@ class MyDslGenerator extends AbstractGenerator {
     			        «HelperClass.generateAssertions(entry, entry.name)»
     			    «ENDIF»
     			«ENDFOR»
+    			«FOR entry : root.entries»
+    				«IF !entry.entries.empty»
+    					«HelperClass.generateTests(entry)»
+    				«ELSE»
+    					«HelperClass.compileExp(entry.type, entry)»;
+    					
+    				«ENDIF»
+    			«ENDFOR»
     			
     		}
-    		
-    		«FOR entry : root.entries»
-    		    «IF !entry.entries.empty»
-    		    	«HelperClass.generateTests(entry)»
-    		    «ELSE»
-    		    	// Test for entry:«entry.name»
-    		    	@Test
-    		    	def void «entry.name»Test() {
-    		    		«HelperClass.compileExp(entry.type, entry, entry)»;
-    		    	}
-    		    «ENDIF»
-    		«ENDFOR»
-    		
     	}
     '''
     
@@ -91,13 +93,9 @@ class HelperClass {
     static def generateTests(Entry entry) '''
         «FOR subEntry : entry.entries»
         	«IF !subEntry.entries.empty»
-        		«generateTests(subEntry)»
+        		«generateTests(subEntry)»;
         	«ELSE»
-        		// Test for entry: «subEntry.name»
-        		@Test
-        		def void «subEntry.name»Test() {
-        			«subEntry.type.compileExp(subEntry, entry)»;
-        		}
+        		«subEntry.type.compileExp(subEntry, entry)»;
         	«ENDIF»
         «ENDFOR»
     '''
@@ -108,15 +106,30 @@ class HelperClass {
     		return exp.left.compileExp(entry, parentEntry) + "\n" + exp.right.compileExp(entry, parentEntry);
 		} else if (exp instanceof StringConstraint) {
 			if(exp.constraint.equals('=')){
-				return "assertTrue(" + parentEntry.name+".get("+"\""+entry.name+"\""+").equals("+"\""+exp.value+"\"))";
+				return "assertEquals(\"\\\""+exp.value+"\\\"\","+parentEntry.name+".get("+"\""+entry.name+"\""+").toString())";
 			} else if(exp.constraint.equals('!=')){
-				return "assertTrue(!" + parentEntry.name+".get("+"\""+entry.name+"\""+").equals("+"\""+exp.value+"\"))";
+				return "assertNotEquals(\"\\\""+exp.value+"\\\"\","+parentEntry.name+".get("+"\""+entry.name+"\""+").toString())";
 			}
 		} else if (exp instanceof IntConstraint) {
 			return "assertTrue("+parentEntry.name+".get("+"\""+entry.name+"\""+")"+ exp.constraint +exp.value +")";
 			
 		}
-	} 
+	}
+	static def String compileExp(Exp exp, Entry entry) {
+   	
+		if (exp instanceof And) {
+    		return exp.left.compileExp(entry) + "\n" + exp.right.compileExp(entry);
+		} else if (exp instanceof StringConstraint) {
+			if(exp.constraint.equals('=')){
+				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.get("+"\""+entry.name+"\""+").toString())";
+			} else if(exp.constraint.equals('!=')){
+				return "assertNotEquals(\"\\\""+exp.value+"\\\"\",rootNode.get("+"\""+entry.name+"\""+").toString())";
+			}
+		} else if (exp instanceof IntConstraint) {
+			return "assertTrue(rootNode.get("+"\""+entry.name+"\""+")"+ exp.constraint +exp.value +")";
+			
+		}
+	}  
 }
 
 
