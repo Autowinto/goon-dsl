@@ -14,6 +14,7 @@ import org.xtext.example.mydsl.myDsl.StringConstraint
 import org.xtext.example.mydsl.myDsl.IntConstraint
 import org.xtext.example.mydsl.myDsl.BoolConstraint
 import org.xtext.example.mydsl.myDsl.IPConstraint
+import org.xtext.example.mydsl.myDsl.Requirement
 import org.xtext.example.mydsl.myDsl.And
 
 
@@ -69,7 +70,7 @@ class MyDslGenerator extends AbstractGenerator {
     				«IF !entry.entries.empty»
     					«HelperClass.generateTests(entry)»
     				«ELSE»
-    					«HelperClass.compileExp(entry.type, entry)»;
+    					«HelperClass.compileExp(entry.type, entry)»
     					
     				«ENDIF»
     			«ENDFOR»
@@ -93,9 +94,9 @@ class HelperClass {
     static def generateTests(Entry entry) '''
         «FOR subEntry : entry.entries»
         	«IF !subEntry.entries.empty»
-        		«generateTests(subEntry)»;
+        		«generateTests(subEntry)»
         	«ELSE»
-        		«subEntry.type.compileExp(subEntry, entry)»;
+        		«subEntry.type.compileExp(subEntry, entry)»
         	«ENDIF»
         «ENDFOR»
     '''
@@ -106,28 +107,34 @@ class HelperClass {
     		return exp.left.compileExp(entry, parentEntry) + "\n" + exp.right.compileExp(entry, parentEntry);
 		} else if (exp instanceof StringConstraint) {
 			if(exp.constraint.equals('=')){
-				return "assertEquals(\"\\\""+exp.value+"\\\"\","+parentEntry.name+".get("+"\""+entry.name+"\""+").toString())";
+				return "assertEquals(\"\\\""+exp.value+"\\\"\","+parentEntry.name+".get("+"\""+entry.name+"\""+").toString());";
 			} else if(exp.constraint.equals('!=')){
-				return "assertNotEquals(\"\\\""+exp.value+"\\\"\","+parentEntry.name+".get("+"\""+entry.name+"\""+").toString())";
+				return "assertNotEquals(\"\\\""+exp.value+"\\\"\","+parentEntry.name+".get("+"\""+entry.name+"\""+").toString());";
 			}
 		} else if (exp instanceof IntConstraint) {
-			return "assertTrue("+parentEntry.name+".get("+"\""+entry.name+"\""+")"+ exp.constraint +exp.value +")";
+			return "assertTrue(Integer.parseInt("+parentEntry.name+".get("+"\""+entry.name+"\""+").toString())"+ exp.constraint +exp.value +");";
 			
+		} else if (exp instanceof Requirement) {
+			return "assertTrue(!rootNode.findPath(\""+ exp.ref.name + "\").toString().isEmpty());";
 		}
+		
 	}
+	
 	static def String compileExp(Exp exp, Entry entry) {
    	
 		if (exp instanceof And) {
     		return exp.left.compileExp(entry) + "\n" + exp.right.compileExp(entry);
 		} else if (exp instanceof StringConstraint) {
 			if(exp.constraint.equals('=')){
-				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.get("+"\""+entry.name+"\""+").toString())";
+				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.get("+"\""+entry.name+"\""+").toString());";
 			} else if(exp.constraint.equals('!=')){
-				return "assertNotEquals(\"\\\""+exp.value+"\\\"\",rootNode.get("+"\""+entry.name+"\""+").toString())";
+				return "assertNotEquals(\"\\\""+exp.value+"\\\"\",rootNode.get("+"\""+entry.name+"\""+").toString());";
 			}
 		} else if (exp instanceof IntConstraint) {
-			return "assertTrue(rootNode.get("+"\""+entry.name+"\""+")"+ exp.constraint +exp.value +")";
+			return "assertTrue(Integer.parseInt(rootNode.get("+"\""+entry.name+"\""+").toString())"+ exp.constraint +exp.value +");";
 			
+		}else if (exp instanceof Requirement) {
+			return "assertTrue(!rootNode.findPath("+ exp.ref.name + ").toString().isEmpty());";
 		}
 	}  
 }
