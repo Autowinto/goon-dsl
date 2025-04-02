@@ -66,16 +66,20 @@ class MyDslGenerator extends AbstractGenerator {
     			        «HelperClass.generateAssertions(entry, entry.name)»
     			    «ENDIF»
     			«ENDFOR»
-    			«FOR entry : root.entries»
-    				«IF !entry.entries.empty»
-    					«HelperClass.generateTests(entry)»
-    				«ELSE»
-    					«HelperClass.compileExp(entry.type, entry)»
-    					
-    				«ENDIF»
-    			«ENDFOR»
+    			
     			
     		}
+    		«FOR entry : root.entries»
+    			«IF !entry.entries.empty»
+    				«HelperClass.generateTests(entry)»
+    			«ELSE»	
+    			
+			@Test
+			public void test«entry.name»() throws IOException {
+				«HelperClass.compileExp(entry.type, entry)»
+			}
+    			«ENDIF»
+    		«ENDFOR»
     	}
     '''
     
@@ -93,32 +97,17 @@ class HelperClass {
     '''
     static def generateTests(Entry entry) '''
         «FOR subEntry : entry.entries»
-        	«IF !subEntry.entries.empty»
-        		«generateTests(subEntry)»
+        	«IF !subEntry.entries.empty»«generateTests(subEntry)»
         	«ELSE»
-        		«subEntry.type.compileExp(subEntry, entry)»
+        		
+        	@Test
+        	public void test«subEntry.name»() throws IOException {
+        		«subEntry.type.compileExp(subEntry)»
+        	}
         	«ENDIF»
         «ENDFOR»
     '''
    
-   static def String compileExp(Exp exp, Entry entry, Entry parentEntry) {
-   	
-		if (exp instanceof And) {
-    		return exp.left.compileExp(entry, parentEntry) + "\n" + exp.right.compileExp(entry, parentEntry);
-		} else if (exp instanceof StringConstraint) {
-			if(exp.constraint.equals('=')){
-				return "assertEquals(\"\\\""+exp.value+"\\\"\","+parentEntry.name+".get("+"\""+entry.name+"\""+").toString());";
-			} else if(exp.constraint.equals('!=')){
-				return "assertNotEquals(\"\\\""+exp.value+"\\\"\","+parentEntry.name+".get("+"\""+entry.name+"\""+").toString());";
-			}
-		} else if (exp instanceof IntConstraint) {
-			return "assertTrue(Integer.parseInt("+parentEntry.name+".get("+"\""+entry.name+"\""+").toString())"+ exp.constraint +exp.value +");";
-			
-		} else if (exp instanceof Requirement) {
-			return "assertTrue(!rootNode.findPath(\""+ exp.ref.name + "\").toString().isEmpty());";
-		}
-		
-	}
 	
 	static def String compileExp(Exp exp, Entry entry) {
    	
@@ -126,15 +115,25 @@ class HelperClass {
     		return exp.left.compileExp(entry) + "\n" + exp.right.compileExp(entry);
 		} else if (exp instanceof StringConstraint) {
 			if(exp.constraint.equals('=')){
-				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.get("+"\""+entry.name+"\""+").toString());";
+				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
 			} else if(exp.constraint.equals('!=')){
-				return "assertNotEquals(\"\\\""+exp.value+"\\\"\",rootNode.get("+"\""+entry.name+"\""+").toString());";
+				return "assertNotEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
 			}
 		} else if (exp instanceof IntConstraint) {
-			return "assertTrue(Integer.parseInt(rootNode.get("+"\""+entry.name+"\""+").toString())"+ exp.constraint +exp.value +");";
+			return "assertTrue(Integer.parseInt(rootNode.findPath("+"\""+entry.name+"\""+").toString())"+ exp.constraint +exp.value +");";
 			
-		}else if (exp instanceof Requirement) {
-			return "assertTrue(!rootNode.findPath("+ exp.ref.name + ").toString().isEmpty());";
+		} else if (exp instanceof Requirement) {
+			return "assertTrue(!rootNode.findPath(\""+ exp.ref.name + "\").toString().isEmpty());";
+		} else if (exp instanceof BoolConstraint) {
+			if(exp.constraint.equals('=')){
+				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
+			} else if(exp.constraint.equals('!=')){
+				return "assertNotEquals("+exp.value+",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
+			}
+		} else if (exp instanceof IPConstraint) {
+			if(exp.constraint.equals('=')){
+				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
+			}
 		}
 	}  
 }
