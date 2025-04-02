@@ -45,5 +45,9 @@ TermIP:
 ;
 
 Requirement:
-	'requires' ref=[Entry]
+	'requires' (ref=[Entry] | DotReference)
+;
+
+DotReference returns ref:
+	'Awoogaboogaboo'
 ;
