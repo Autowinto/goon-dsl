@@ -3,13 +3,20 @@
  */
 package org.xtext.example.mydsl.scoping;
 
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
+import org.eclipse.xtext.scoping.IScope;
+import org.eclipse.xtext.scoping.Scopes;
+import org.eclipse.xtext.xbase.typesystem.internal.ExpressionScope.Scope;
+import org.xtext.example.mydsl.myDsl.Config;
+import org.xtext.example.mydsl.myDsl.Entry;
+import org.xtext.example.mydsl.myDsl.MyDslPackage;
 
-/**
- * This class contains custom scoping description.
- * 
- * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#scoping
- * on how and when to use it.
- */
 public class MyDslScopeProvider extends AbstractMyDslScopeProvider {
 
+	@Override
+	public IScope getScope (EObject context, EReference reference) {
+		return super.getScope(context, reference);
+	}
+	
 }

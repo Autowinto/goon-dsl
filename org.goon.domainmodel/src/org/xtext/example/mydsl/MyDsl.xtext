@@ -45,9 +45,13 @@ TermIP:
 ;
 
 Requirement:
-	'requires' (ref=[Entry] | DotReference)
+	'requires' (EntityRef | DotRef)
 ;
 
-DotReference returns ref:
-	'Awoogaboogaboo'
+EntityRef returns ref:
+	ref=[Entry]
+;
+
+DotRef:
+	root=[Entry] ({DotRef.ref=current} '.' tail+=[Entry])+
 ;
