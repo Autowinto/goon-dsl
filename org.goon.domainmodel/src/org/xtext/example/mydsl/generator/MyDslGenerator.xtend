@@ -80,10 +80,32 @@ class MyDslGenerator extends AbstractGenerator {
 			}
     			«ENDIF»
     		«ENDFOR»
-    	}
+    	
+    	
+    public static double intFromIP(String ip){
+    		ip = ip.replaceAll("^\"|\"$", "");
+            String[] IPParts = ip.split("\\.");
+            String doubleString = "";
+            for (String part: IPParts){
+                if (part.length() == 3){
+                    doubleString += part;
+                }
+                else{
+                    String newPart = part;
+                    int len = newPart.length();
+                    while(len<3){
+                        newPart = "0"+newPart;
+                        len = newPart.length();
+                    }
+                    doubleString += newPart;
+                }
+            }
+               return Double.parseDouble(doubleString);
+        }
+    }
     '''
-    
 }
+    
     
 class HelperClass {
     static def generateAssertions(Entry entry, String parentName) '''
@@ -120,6 +142,9 @@ class HelperClass {
 				return "assertNotEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
 			}
 		} else if (exp instanceof IntConstraint) {
+			if(exp.constraint.equals('=')){
+				return "assertEquals("+exp.value+",Integer.parseInt(rootNode.findPath("+"\""+entry.name+"\""+").toString()));";
+			}
 			return "assertTrue(Integer.parseInt(rootNode.findPath("+"\""+entry.name+"\""+").toString())"+ exp.constraint +exp.value +");";
 			
 		} else if (exp instanceof Requirement) {
@@ -134,7 +159,10 @@ class HelperClass {
 			if(exp.constraint.equals('=')){
 				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
 			}
-		}
+			else {
+				return "assertTrue(intFromIP(rootNode.findPath("+"\""+entry.name+"\""+").toString())"+ exp.constraint +"intFromIP("+"\""+exp.value+"\"" +"));";
+			}
+		} 
 	}  
 }
 
