@@ -16,6 +16,7 @@ import org.xtext.example.mydsl.myDsl.BoolConstraint
 import org.xtext.example.mydsl.myDsl.IPConstraint
 import org.xtext.example.mydsl.myDsl.Requirement
 import org.xtext.example.mydsl.myDsl.And
+import org.xtext.example.mydsl.myDsl.*
 
 
 /**
@@ -132,40 +133,54 @@ class HelperClass {
    
 	
 	static def String compileExp(Exp exp, Entry entry) {
-   	
-		if (exp instanceof And) {
-    		return exp.left.compileExp(entry) + "\n" + exp.right.compileExp(entry);
-		} else if (exp instanceof StringConstraint) {
-			if(exp.constraint.equals('=')){
-				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
-			} else if(exp.constraint.equals('!=')){
-				return "assertNotEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
-			}
-		} else if (exp instanceof IntConstraint) {
-			if(exp.constraint.equals('=')){
-				return "assertEquals("+exp.value+",Integer.parseInt(rootNode.findPath("+"\""+entry.name+"\""+").toString()));";
-			}
-			return "assertTrue(Integer.parseInt(rootNode.findPath("+"\""+entry.name+"\""+").toString())"+ exp.constraint +exp.value +");";
-			
-		} else if (exp instanceof Requirement) {
-			return "assertTrue(!rootNode.findPath(\""+ exp.ref.name + "\").toString().isEmpty());";
-		} else if (exp instanceof BoolConstraint) {
-			if(exp.constraint.equals('=')){
-				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
-			} else if(exp.constraint.equals('!=')){
-				return "assertNotEquals("+exp.value+",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
-			}
-		} else if (exp instanceof IPConstraint) {
-			if(exp.constraint.equals('=')){
-				return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath("+"\""+entry.name+"\""+").toString());";
-			}
-			else {
-				return "assertTrue(intFromIP(rootNode.findPath("+"\""+entry.name+"\""+").toString())"+ exp.constraint +"intFromIP("+"\""+exp.value+"\"" +"));";
-			}
-		} 
-	}  
+    if (exp instanceof And) {
+        return exp.left.compileExp(entry) + "\n" + exp.right.compileExp(entry);
+    } else if (exp instanceof StringConstraint) {
+        if(exp.constraint.equals('=')){
+            return "assertEquals(\""+(exp.value as Str).value+"\", rootNode.findPath(\""+entry.name+"\").asText());";
+        } else if(exp.constraint.equals('!=')){
+            return "assertNotEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath(\""+entry.name+"\").toString());";
+        }
+    } else if (exp instanceof IntConstraint) {
+        if(exp.constraint.equals('=')){
+            return "assertEquals("+compileArithmetic(exp.value)+",Integer.parseInt(rootNode.findPath(\""+entry.name+"\").toString()));";
+        }
+        return "assertTrue(Integer.parseInt(rootNode.findPath(\""+entry.name+"\").toString())"+ exp.constraint +compileArithmetic(exp.value)+");";
+    } else if (exp instanceof Requirement) {
+        return "assertTrue(!rootNode.findPath(\""+ exp.ref.name + "\").toString().isEmpty());";
+    } else if (exp instanceof BoolConstraint) {
+        if(exp.constraint.equals('=')){
+            return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath(\""+entry.name+"\").toString());";
+        } else if(exp.constraint.equals('!=')){
+            return "assertNotEquals("+exp.value+",rootNode.findPath(\""+entry.name+"\").toString());";
+        }
+    } else if (exp instanceof IPConstraint) {
+        if(exp.constraint.equals('=')){
+            return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath(\""+entry.name+"\").toString());";
+        }
+        else {
+            return "assertTrue(intFromIP(rootNode.findPath(\""+entry.name+"\").toString())"+ exp.constraint +"intFromIP(\""+exp.value+"\") );";
+        }
+    } else {
+        // Arithmetic or property reference at the top level
+        return "assertEquals(" + compileArithmetic(exp) + ", Integer.parseInt(rootNode.findPath(\""+entry.name+"\").toString()));";
+    }
+}
+
+// Helper for arithmetic and property reference expressions
+static def String compileArithmetic(Object exp) {
+    switch exp {
+        Plus: return compileArithmetic(exp.left) + " + " + compileArithmetic(exp.right)
+        Minus: return compileArithmetic(exp.left) + " - " + compileArithmetic(exp.right)
+        Mult: return compileArithmetic(exp.left) + " * " + compileArithmetic(exp.right)
+        Div: return compileArithmetic(exp.left) + " / " + compileArithmetic(exp.right)
+        Number: return exp.value.toString
+        PropertyReference: return "Integer.parseInt(rootNode.findPath(\""+exp.ref.name+"\").toString())"
+        default: return "0"
+    }
+}
 }
 
 
-    
-   
+
+
