@@ -2,15 +2,16 @@ grammar org.xtext.example.mydsl.MyDsl with org.eclipse.xtext.common.Terminals
 
 generate myDsl "http://www.xtext.org/example/mydsl/MyDsl"
 
+import "http://www.eclipse.org/xtext/common/JavaVMTypes" as types
+
 Config:
     'config' name=ID  entries+=Entry*
 ;
     
 Entry: 
-	name=ID':' (type=Exp | '{' entries+=Entry* '}')
+	name=ID':' (type=Exp | ref=[Entry|QualifiedName] | '{' entries+=Entry* '}')
 ;    
     
-
 Exp: 
 	Constraint ({And.left=current} '&&' right=Exp)?
 ;
@@ -39,19 +40,13 @@ IPConstraint:
     'IP' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=TermIP)?
 ;
 
-
 TermIP:
 	INT'.'INT'.'INT'.'INT | 'localhost'
 ;
 
+QualifiedName:
+    ID ('.' ID)*;
+
 Requirement:
-	'requires' (EntityRef | DotRef)
-;
-
-EntityRef returns ref:
-	ref=[Entry]
-;
-
-DotRef:
-	root=[Entry] ({DotRef.ref=current} '.' tail+=[Entry])+
+	    'requires' ref=[Entry|QualifiedName]
 ;
