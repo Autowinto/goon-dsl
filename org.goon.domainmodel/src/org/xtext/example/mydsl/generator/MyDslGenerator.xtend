@@ -26,8 +26,7 @@ import org.xtext.example.mydsl.myDsl.And
 class MyDslGenerator extends AbstractGenerator {
 	
 	
-	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		
+	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {		
         var root = resource.allContents.toIterable.filter(Config).get(0)
 	    fsa.generateFile("configTests/"+root.name+".java", root.compile())
     }
