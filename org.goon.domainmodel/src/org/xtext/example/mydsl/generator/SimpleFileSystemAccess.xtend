@@ -16,7 +16,6 @@ class SimpleFileSystemAccess implements IFileSystemAccess2 {
     println("Generated file: " + outFile.absolutePath)
 }
 
- 
     override void deleteFile(String fileName) {
         // do nothing
     }

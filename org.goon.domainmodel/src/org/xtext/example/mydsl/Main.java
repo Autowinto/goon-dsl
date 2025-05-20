@@ -40,7 +40,7 @@ public class Main {
             // 4. Call your generator (passing implementation IFileSystemAccess2 interface and IGeneratorContex)
             MyDslGenerator generator = injector.getInstance(MyDslGenerator.class);
             generator.doGenerate(resource, new SimpleFileSystemAccess(), null);
-
+            
             System.out.println("DSL file processed successfully.");
 
         } catch (IOException e) {

@@ -16,7 +16,7 @@ import org.xtext.example.mydsl.myDsl.BoolConstraint
 import org.xtext.example.mydsl.myDsl.IPConstraint
 import org.xtext.example.mydsl.myDsl.Requirement
 import org.xtext.example.mydsl.myDsl.And
-
+import java.io.File
 
 /**
  * Generates code from your model files on save.
@@ -25,33 +25,27 @@ import org.xtext.example.mydsl.myDsl.And
  */
 class MyDslGenerator extends AbstractGenerator {
 	
-	
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {		
         var root = resource.allContents.toIterable.filter(Config).get(0)
-	    fsa.generateFile(root.name+".java", root.compile())
+        new File("src/test/java").mkdirs
+	    fsa.generateFile("src/test/java/"+root.name+"Test.java", root.compile())
+	    fsa.generateFile("pom.xml", new HelperClass().getPomContent(root.name))
     }
     
     def compile(Config root)'''
     	import com.fasterxml.jackson.databind.JsonNode;
     	import com.fasterxml.jackson.databind.ObjectMapper;
+    	import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+    	import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
     	import org.junit.jupiter.api.Test;
     	import static org.junit.jupiter.api.Assertions.*;
     	
     	import java.io.File;
     	import java.io.IOException;
     	
-    	public class «root.name»Tests {
-    		// Assuming File is named config.json
-    		File jsonFile = new File("src/config.json");
-    		ObjectMapper objectMapper = new ObjectMapper();
-    		JsonNode rootNode;
-    		{
-    			try {
-    				rootNode = objectMapper.readTree(jsonFile);
-    			} catch (IOException e) {
-    				throw new RuntimeException(e);
-    			}
-    		}
+    	public class «root.name»Test{
+    		String filePath = System.getProperty("path");  // Or pass your path directly here
+	        JsonNode rootNode = readConfigFromPath(filePath);
     		
     		@Test
     		public void testConfigJsonStructure() throws IOException {
@@ -101,8 +95,45 @@ class MyDslGenerator extends AbstractGenerator {
             }
                return Double.parseDouble(doubleString);
         }
+    
+        public static JsonNode readConfigFromPath(String filePath) {
+            if (filePath == null || filePath.isEmpty()) {
+                throw new IllegalArgumentException("File path is null or empty");
+            }
+    
+            File file = new File(filePath);
+            if (!file.exists()) {
+                throw new IllegalArgumentException("File does not exist: " + filePath);
+            }
+    
+            String extension = getFileExtension(filePath).toLowerCase();
+    
+            try {
+                switch (extension) {
+                    case "json":
+                        return new ObjectMapper().readTree(file);
+                    case "xml":
+                        return new XmlMapper().readTree(file);
+                    case "yaml":
+                    case "yml":
+                        return new YAMLMapper().readTree(file);
+                    default:
+                        throw new IllegalArgumentException("Unsupported file extension: " + extension);
+                }
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to read file: " + filePath, e);
+            }
+        }
+    
+        private static String getFileExtension(String fileName) {
+            int lastDot = fileName.lastIndexOf('.');
+            if (lastDot == -1 || lastDot == fileName.length() - 1) {
+                return "";
+            }
+            return fileName.substring(lastDot + 1);
+        }
     }
-    '''
+'''
 }
     
     
@@ -162,7 +193,87 @@ class HelperClass {
 				return "assertTrue(intFromIP(rootNode.findPath("+"\""+entry.name+"\""+").toString())"+ exp.constraint +"intFromIP("+"\""+exp.value+"\"" +"));";
 			}
 		} 
-	}  
+	}   
+	def getPomContent(String fileName){
+		return '''
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <version>1.0-SNAPSHOT</version>
+  <groupId>org.xtext.example</groupId>
+  <artifactId>«fileName»Test</artifactId>
+  <properties>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+  </properties>
+  <dependencies>
+    <!-- Jackson core -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.15.2</version>
+    </dependency>
+    <!-- Jackson annotations -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>2.15.2</version>
+    </dependency>
+    <!-- Jackson databind -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.15.2</version>
+    </dependency>
+    <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-xml</artifactId>
+        <version>2.15.2</version> <!-- Use the latest version -->
+    </dependency>
+    <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-yaml</artifactId>
+        <version>2.15.2</version> <!-- Use the latest version -->
+    </dependency>
+    <!-- JUnit Jupiter for tests -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>5.10.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.10.0</version>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>«fileName»Test.Main</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+'''
+	}
 }
 
 
