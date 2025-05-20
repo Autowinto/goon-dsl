@@ -9,11 +9,9 @@ import java.nio.file.Paths
 import java.nio.charset.StandardCharsets
 
 class SimpleFileSystemAccess implements IFileSystemAccess2 {
-    val File outputDir = new File("output")
 
     override void generateFile(String fileName, CharSequence contents) {
-    val outFile = new File(outputDir, fileName)
-    outFile.parentFile.mkdirs
+    val outFile = new File(fileName)
     Files.write(Paths.get(outFile.absolutePath), contents.toString.getBytes(StandardCharsets.UTF_8))
     println("Generated file: " + outFile.absolutePath)
 }

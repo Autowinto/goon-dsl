@@ -28,7 +28,7 @@ class MyDslGenerator extends AbstractGenerator {
 	
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {		
         var root = resource.allContents.toIterable.filter(Config).get(0)
-	    fsa.generateFile("configTests/"+root.name+".java", root.compile())
+	    fsa.generateFile(root.name+".java", root.compile())
     }
     
     def compile(Config root)'''

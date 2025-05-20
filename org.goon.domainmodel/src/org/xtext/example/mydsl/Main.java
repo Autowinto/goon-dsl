@@ -6,7 +6,6 @@ import java.io.IOException;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.xtext.generator.IFileSystemAccess2;
 import org.xtext.example.mydsl.generator.MyDslGenerator;
 import org.xtext.example.mydsl.generator.SimpleFileSystemAccess;
 
