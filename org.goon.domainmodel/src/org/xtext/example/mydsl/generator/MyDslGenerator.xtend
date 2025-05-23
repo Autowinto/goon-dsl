@@ -16,7 +16,12 @@ import org.xtext.example.mydsl.myDsl.BoolConstraint
 import org.xtext.example.mydsl.myDsl.IPConstraint
 import org.xtext.example.mydsl.myDsl.Requirement
 import org.xtext.example.mydsl.myDsl.And
-import org.xtext.example.mydsl.myDsl.*
+import org.xtext.example.mydsl.myDsl.Plus
+import org.xtext.example.mydsl.myDsl.Minus
+import org.xtext.example.mydsl.myDsl.Mult
+import org.xtext.example.mydsl.myDsl.Div
+import org.xtext.example.mydsl.myDsl.Bool
+import org.xtext.example.mydsl.myDsl.PropertyReference
 
 
 /**
@@ -25,162 +30,178 @@ import org.xtext.example.mydsl.myDsl.*
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#code-generation
  */
 class MyDslGenerator extends AbstractGenerator {
-	
-	
+
 	override void doGenerate(Resource resource, IFileSystemAccess2 fsa, IGeneratorContext context) {
-		
-        var root = resource.allContents.toIterable.filter(Config).get(0)
-	    fsa.generateFile("configTests/"+root.name+".java", root.compile())
-    }
-    
-    def compile(Config root)'''
-    	import com.fasterxml.jackson.databind.JsonNode;
-    	import com.fasterxml.jackson.databind.ObjectMapper;
-    	import org.junit.jupiter.api.Test;
-    	import static org.junit.jupiter.api.Assertions.*;
-    	
-    	import java.io.File;
-    	import java.io.IOException;
-    	
-    	public class «root.name»Tests {
-    		// Assuming File is named config.json
-    		File jsonFile = new File("src/config.json");
-    		ObjectMapper objectMapper = new ObjectMapper();
-    		JsonNode rootNode;
-    		{
-    			try {
-    				rootNode = objectMapper.readTree(jsonFile);
-    			} catch (IOException e) {
-    				throw new RuntimeException(e);
-    			}
-    		}
-    		
-    		@Test
-    		public void testConfigJsonStructure() throws IOException {
-    			
-    			
-    			assertNotNull(rootNode);
-    			«FOR entry : root.entries»
-    			    assertTrue(rootNode.has("«entry.name»"));
-    			    «IF !entry.entries.empty»
-    			        JsonNode «entry.name» = rootNode.get("«entry.name»");
-    			        «HelperClass.generateAssertions(entry, entry.name)»
-    			    «ENDIF»
-    			«ENDFOR»
-    			
-    			
-    		}
-    		«FOR entry : root.entries»
-    			«IF !entry.entries.empty»
-    				«HelperClass.generateTests(entry)»
-    			«ELSE»	
-    			
-			@Test
-			public void test«entry.name»() throws IOException {
-				«HelperClass.compileExp(entry.type, entry)»
+
+		var root = resource.allContents.toIterable.filter(Config).get(0)
+		fsa.generateFile("ConfigTests/" + root.name + ".java", root.compile())
+	}
+
+	def compile(Config root) '''
+			package ConfigTests;
+			
+			import com.fasterxml.jackson.databind.JsonNode;
+			import com.fasterxml.jackson.databind.ObjectMapper;
+			import org.junit.jupiter.api.Test;
+			import static org.junit.jupiter.api.Assertions.*;
+			
+			import java.io.File;
+			import java.io.IOException;
+			
+			public class «root.name» {
+				File jsonFile = new File("src/config.json");
+				ObjectMapper objectMapper = new ObjectMapper();
+				JsonNode rootNode;
+				{
+					try {
+						rootNode = objectMapper.readTree(jsonFile);
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				}
+				
+				@Test
+				public void testConfigJsonStructure() throws IOException {
+					assertNotNull(rootNode);
+					«FOR entry : root.entries»
+						assertTrue(rootNode.has("«entry.name»"));
+						«IF !entry.entries.empty»
+							JsonNode «entry.name» = rootNode.get("«entry.name»");
+							«HelperClass.generateAssertions(entry, entry.name)»
+						«ENDIF»
+					«ENDFOR»
+				}
+				«FOR entry : root.entries»
+					«IF !entry.entries.empty»
+						«HelperClass.generateTests(entry)»
+					«ELSE»	
+					
+					@Test
+					public void test«entry.name»() throws IOException {
+								«HelperClass.compileExp(entry.type, entry)»
+					}
+					«ENDIF»
+				«ENDFOR»
+				
+				
+				public static double intFromIP(String ip) {
+					ip = ip.replaceAll("^\"|\"$", "");
+					String[] IPParts = ip.split("\\.");
+					String doubleString = "";
+					for (String part : IPParts) {
+						if (part.length() == 3) {
+							doubleString += part;
+						} else {
+							String newPart = part;
+							int len = newPart.length();
+							while (len < 3) {
+								newPart = "0" + newPart;
+								len = newPart.length();
+							}
+							doubleString += newPart;
+						}
+					}
+					return Double.parseDouble(doubleString);
+				}
 			}
-    			«ENDIF»
-    		«ENDFOR»
-    	
-    	
-    public static double intFromIP(String ip){
-    		ip = ip.replaceAll("^\"|\"$", "");
-            String[] IPParts = ip.split("\\.");
-            String doubleString = "";
-            for (String part: IPParts){
-                if (part.length() == 3){
-                    doubleString += part;
-                }
-                else{
-                    String newPart = part;
-                    int len = newPart.length();
-                    while(len<3){
-                        newPart = "0"+newPart;
-                        len = newPart.length();
-                    }
-                    doubleString += newPart;
-                }
-            }
-               return Double.parseDouble(doubleString);
-        }
-    }
-    '''
+		'''
 }
-    
-    
+
 class HelperClass {
-    static def generateAssertions(Entry entry, String parentName) '''
-        «FOR subEntry : entry.entries»
-            assertTrue(«parentName».has("«subEntry.name»"));
-            «IF !subEntry.entries.empty»
-                JsonNode «subEntry.name» = «parentName».get("«subEntry.name»");
-                «generateAssertions(subEntry, subEntry.name)»
-            «ENDIF»
-        «ENDFOR»
-    '''
-    static def generateTests(Entry entry) '''
-        «FOR subEntry : entry.entries»
-        	«IF !subEntry.entries.empty»«generateTests(subEntry)»
-        	«ELSE»
-        		
-        	@Test
-        	public void test«subEntry.name»() throws IOException {
-        		«subEntry.type.compileExp(subEntry)»
-        	}
-        	«ENDIF»
-        «ENDFOR»
-    '''
-   
-	
+	static def generateAssertions(Entry entry, String parentName) '''
+		«FOR subEntry : entry.entries»
+			assertTrue(«parentName».has("«subEntry.name»"));
+			«IF !subEntry.entries.empty»
+				JsonNode «subEntry.name» = «parentName».get("«subEntry.name»");
+				«generateAssertions(subEntry, subEntry.name)»
+			«ENDIF»
+		«ENDFOR»
+	'''
+
+	static def generateTests(Entry entry) '''
+		«FOR subEntry : entry.entries»
+			«IF !subEntry.entries.empty»«generateTests(subEntry)»
+			«ELSE»
+				
+				@Test
+				public void test«subEntry.name»() throws IOException {
+					«subEntry.type.compileExp(subEntry)»
+				}
+			«ENDIF»
+		«ENDFOR»
+	'''
+
 	static def String compileExp(Exp exp, Entry entry) {
-    if (exp instanceof And) {
-        return exp.left.compileExp(entry) + "\n" + exp.right.compileExp(entry);
-    } else if (exp instanceof StringConstraint) {
-        if(exp.constraint.equals('=')){
-            return "assertEquals(\""+(exp.value as Str).value+"\", rootNode.findPath(\""+entry.name+"\").asText());";
-        } else if(exp.constraint.equals('!=')){
-            return "assertNotEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath(\""+entry.name+"\").toString());";
-        }
-    } else if (exp instanceof IntConstraint) {
-        if(exp.constraint.equals('=')){
-            return "assertEquals("+compileArithmetic(exp.value)+",Integer.parseInt(rootNode.findPath(\""+entry.name+"\").toString()));";
-        }
-        return "assertTrue(Integer.parseInt(rootNode.findPath(\""+entry.name+"\").toString())"+ exp.constraint +compileArithmetic(exp.value)+");";
-    } else if (exp instanceof Requirement) {
-        return "assertTrue(!rootNode.findPath(\""+ exp.ref.name + "\").toString().isEmpty());";
-    } else if (exp instanceof BoolConstraint) {
-        if(exp.constraint.equals('=')){
-            return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath(\""+entry.name+"\").toString());";
-        } else if(exp.constraint.equals('!=')){
-            return "assertNotEquals("+exp.value+",rootNode.findPath(\""+entry.name+"\").toString());";
-        }
-    } else if (exp instanceof IPConstraint) {
-        if(exp.constraint.equals('=')){
-            return "assertEquals(\"\\\""+exp.value+"\\\"\",rootNode.findPath(\""+entry.name+"\").toString());";
-        }
-        else {
-            return "assertTrue(intFromIP(rootNode.findPath(\""+entry.name+"\").toString())"+ exp.constraint +"intFromIP(\""+exp.value+"\") );";
-        }
-    } else {
-        // Arithmetic or property reference at the top level
-        return "assertEquals(" + compileArithmetic(exp) + ", Integer.parseInt(rootNode.findPath(\""+entry.name+"\").toString()));";
-    }
-}
+		if (exp instanceof And) {
+			return exp.left.compileExp(entry) + "\n" + exp.right.compileExp(entry);
+		} else if (exp instanceof StringConstraint) {
+			if (exp.constraint.equals('=')) {
+				return "assertEquals(\"" + exp.value.compileArithmetic + "\", rootNode.findPath(\"" + entry.name +
+					"\").asText());";
+			} else if (exp.constraint.equals('!=')) {
+				return "assertNotEquals(\"" + exp.value.compileArithmetic + "\", rootNode.findPath(\"" + entry.name +
+					"\").toString());";
+			}
+		} else if (exp instanceof IntConstraint) {
+			if (exp.constraint.equals('=')) {
+				return "assertEquals(\"" + exp.value.compileArithmetic + "\",Integer.parseInt(rootNode.findPath(\"" +
+					entry.name + "\").toString()));";
+			}
+			return "assertTrue(Integer.parseInt(rootNode.findPath(\"" + entry.name + "\").toString())" +
+				exp.constraint + compileArithmetic(exp.value) + ");";
+		} else if (exp instanceof Requirement) {
+			return "assertTrue(!rootNode.findPath(\"" + exp.ref.name + "\").toString().isEmpty());";
+		} else if (exp instanceof BoolConstraint) {
+			if (exp.constraint.equals('=')) {
+				return "assertEquals(\"" + exp.value.compileArithmetic + "\", rootNode.findPath(\"" + entry.name +
+					"\").toString());";
+			} else if (exp.constraint.equals('!=')) {
+				return "assertNotEquals(\"" + exp.value.compileArithmetic + "\", rootNode.findPath(\"" + entry.name + "\").toString());";
+			}
+		} else if (exp instanceof IPConstraint) {
+			if (exp.constraint.equals('=')) {
+				return "assertEquals(\"\\\"" + exp.value + "\\\"\", rootNode.findPath(\"" + entry.name +
+					"\").toString());";
+			} else {
+				return "assertTrue(intFromIP(rootNode.findPath(\"" + entry.name + "\").toString())" + exp.constraint +
+					"intFromIP(\"" + exp.value + "\") );";
+			}
+		} else {
+			// Arithmetic or property reference at the top level
+			return "assertEquals(" + exp.compileArithmetic + ", Integer.parseInt(rootNode.findPath(\"" + entry.name +
+				"\").toString()));";
+		}
+	}
 
 // Helper for arithmetic and property reference expressions
-static def String compileArithmetic(Object exp) {
-    switch exp {
-        Plus: return compileArithmetic(exp.left) + " + " + compileArithmetic(exp.right)
-        Minus: return compileArithmetic(exp.left) + " - " + compileArithmetic(exp.right)
-        Mult: return compileArithmetic(exp.left) + " * " + compileArithmetic(exp.right)
-        Div: return compileArithmetic(exp.left) + " / " + compileArithmetic(exp.right)
-        Number: return exp.value.toString
-        PropertyReference: return "Integer.parseInt(rootNode.findPath(\""+exp.ref.name+"\").toString())"
-        default: return "0"
-    }
+	static def String compileArithmetic(Object exp) {
+		switch exp {
+			Plus: {
+				if (exp.left instanceof org.xtext.example.mydsl.myDsl.Str && exp.right instanceof org.xtext.example.mydsl.myDsl.Str) {					
+					return compileArithmetic(exp.left) + compileArithmetic(exp.right)
+				} 
+				return compileArithmetic(exp.left) + " + " + compileArithmetic(exp.right)
+			}
+			Minus:
+				return compileArithmetic(exp.left) + " - " + compileArithmetic(exp.right)
+			Mult:
+				return compileArithmetic(exp.left) + " * " + compileArithmetic(exp.right)
+			Div:
+				return compileArithmetic(exp.left) + " / " + compileArithmetic(exp.right)
+			org.xtext.example.mydsl.myDsl.Number:
+				return exp.value.toString
+			org.xtext.example.mydsl.myDsl.Str:
+				return exp.value
+			Bool: {
+				val value = exp.value
+				if (value == "true") {
+					return "True"
+				} else if (value == "false") {
+					return "False"
+				}
+			}
+			PropertyReference:
+				return "Integer.parseInt(rootNode.findPath(\"" + exp.ref.name + "\").toString())"
+		}
+	}
 }
-}
-
-
-
-

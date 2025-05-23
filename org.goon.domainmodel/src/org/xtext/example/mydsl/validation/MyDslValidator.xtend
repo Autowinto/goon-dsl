@@ -16,129 +16,191 @@ import org.xtext.example.mydsl.myDsl.impl.IPConstraintImpl
 
 /**
  * This class contains custom validation rules. 
- *
+ * 
  * See https://www.eclipse.org/Xtext/documentation/303_runtime_concepts.html#validation
  */
 class MyDslValidator extends AbstractMyDslValidator {
-	
-	public static final String INVALID_EXPRESSION_RESULT_TYPE = "invalidExpressionResultType";	
-    protected enum Type {
-        INT, STRING, BOOL, IP, UNKNOWN, ERROR
-    }
-    
-    @Check
-    def checkConstraintValueType(Constraint constraint) {
-        var Expression valueExpression = null
-        var Type expectedType = Type.UNKNOWN
-        var EReference errorFeature = null
 
-        switch constraint {
-            IntConstraint: {
-                valueExpression = constraint.value
-                expectedType = Type.INT
-                errorFeature = MyDslPackage.Literals.INT_CONSTRAINT__VALUE
-            }
-            StringConstraint: {
-                valueExpression = constraint.value
-                expectedType = Type.STRING
-                errorFeature = MyDslPackage.Literals.STRING_CONSTRAINT__VALUE
-            }
-            BoolConstraint: {
-                valueExpression = constraint.value
-                expectedType = Type.BOOL
-                errorFeature = MyDslPackage.Literals.BOOL_CONSTRAINT__VALUE
-            }
-            default: {
-                // Ignore IPConstraint
-                return
-            }
-        }
+	public static final String INCOMPATIBLE_EXPRESSION_TYPES = "incompatibleExpressionTypes";
+	public static final String INVALID_EXPRESSION_RESULT_TYPE = "invalidExpressionResultType";
+	public static final String DIVISION_BY_ZERO_ERROR = "divisionByZeroError";
+	public static final String COMPLEX_BOOLEAN_EXPRESSION_ERROR = "complexBooleanExpressionError";
+	public static final String MULTIPLICATVIE_EXPRESSION_ERROR = "multiplicativeOperatorError";
+	public static final String SUBTRACTION_OPERATOR_ERROR = "subtractionOperatorError";
 
-        if (valueExpression !== null) {
-            var actualType = computeType(valueExpression)
+	protected enum Type {
+		INT,
+		STRING,
+		BOOL,
+		IP,
+		ERROR,
+		ERROR_BOOL_EXP,
+		ERROR_MULTIPLICATIVE_OPERATORS,
+		ERROR_SUBTRACTION
+	}
 
-            if (actualType == Type.ERROR) {
-                error("Result of expression must be an " + expectedType.toString().toLowerCase(),
-                    errorFeature,
-                    INVALID_EXPRESSION_RESULT_TYPE)
-            }
-        }
-    }
-    
-    def computeType(Expression exp) {
-        switch exp {
-            Plus: {
-                val leftType = computeType(exp.left)
-                val rightType = computeType(exp.right)
-                if (leftType == Type.INT && rightType == Type.INT) {
-                    return Type.INT
-                }
+	@Check
+	def checkConstraintValueType(Constraint constraint) {
+		var Expression valueExpression = null
+		var Type expectedType = null;
+		var EReference errorFeature = null
 
-                if (leftType == Type.STRING && rightType == Type.STRING) {
-                    return Type.STRING
-                }
-                return Type.ERROR
-            }
-            Minus: {
-                val leftType = computeType(exp.left)
-                val rightType = computeType(exp.right)
-                if (leftType == Type.INT && rightType == Type.INT) {
-                    return Type.INT
-                }
-                return Type.ERROR
-            }
-            Mult: {
-                val leftType = computeType(exp.left)
-                val rightType = computeType(exp.right)
-                if (leftType == Type.INT && rightType == Type.INT) {
-                    return Type.INT
-                }
-                return Type.ERROR
-            }
-            Div: {
-                val leftType = computeType(exp.left)
-                val rightType = computeType(exp.right)
-                if (leftType == Type.INT && rightType == Type.INT) {
-                    return Type.INT
-                }
-                return Type.ERROR
-            }
-            Number: return Type.INT
-            Str: return Type.STRING
-            Bool: return Type.BOOL
-            PropertyReference: {
-                val referencedEntry = exp.ref
-                
-                if (referencedEntry !== null) {
-                    val entryExp = referencedEntry
+		switch constraint {
+			IntConstraint: {
+				valueExpression = constraint.value
+				expectedType = Type.INT
+				errorFeature = MyDslPackage.Literals.INT_CONSTRAINT__VALUE
+			}
+			StringConstraint: {
+				valueExpression = constraint.value
+				expectedType = Type.STRING
+				errorFeature = MyDslPackage.Literals.STRING_CONSTRAINT__VALUE
+			}
+			BoolConstraint: {
+				valueExpression = constraint.value
+				expectedType = Type.BOOL
+				errorFeature = MyDslPackage.Literals.BOOL_CONSTRAINT__VALUE
+			}
+			default: {
+				// Ignore IPConstraint
+				return
+			}
+		}
 
-                    
-                    if (entryExp instanceof IntConstraintImpl) {
-                        return Type.INT
-                    } else if (entryExp instanceof StringConstraintImpl) {
-                        return Type.STRING
-                    } else if (entryExp instanceof BoolConstraintImpl) {
-                        return Type.BOOL
-                    } else if (entryExp instanceof IPConstraintImpl) {
-                        return Type.IP 
-                    }
-                }
-            }
-            default: return Type.UNKNOWN
-        }
-    }
+		if (valueExpression !== null) {
+			var actualType = computeType(valueExpression)
+
+			if (actualType == Type.ERROR) {
+				error("Result of expression must be an " + expectedType.toString().toLowerCase(), errorFeature,
+					INCOMPATIBLE_EXPRESSION_TYPES)
+			} 
+			
+			else if (actualType == Type.ERROR_BOOL_EXP) {
+				error("Complex boolean expressions not allowed", errorFeature, COMPLEX_BOOLEAN_EXPRESSION_ERROR)
+			} 
+			
+			else if (actualType == Type.ERROR_MULTIPLICATIVE_OPERATORS) {
+				error("Multiplicative operators only allowed for integers", errorFeature,
+					MULTIPLICATVIE_EXPRESSION_ERROR)
+			} 
+			
+			else if (actualType == Type.ERROR_SUBTRACTION) {
+				error("Subtraction only allowed for integers", errorFeature, SUBTRACTION_OPERATOR_ERROR)
+			} 
+			
+			else if (actualType != expectedType) {
+				error(expectedType.toString().toLowerCase() + " can't be compared to " +
+					actualType.toString().toLowerCase(), constraint, null, INVALID_EXPRESSION_RESULT_TYPE)
+			}
+		}
+	}
+
+	@Check
+	def checkForZeroDivision(Div divExpression) {
+		val right = divExpression.right
+
+		if (right instanceof Number) {
+			if (right.value == 0) {
+				error("Division by zero", divExpression, MyDslPackage.Literals.DIV__RIGHT, DIVISION_BY_ZERO_ERROR)
+			}
+		}
+	}
+
+
+	def computeType(Expression exp) {
+		switch exp {
+			Plus: {
+				val leftType = computeType(exp.left)
+				val rightType = computeType(exp.right)
+				if (leftType == Type.INT && rightType == Type.INT) {
+					return Type.INT
+				}
+
+				if (leftType == Type.STRING && rightType == Type.STRING) {
+					return Type.STRING
+				}
+
+				if (leftType == Type.BOOL && rightType == Type.BOOL) {
+					return Type.ERROR_BOOL_EXP
+				}
+
+				return Type.ERROR
+			}
+			Minus: {
+				val leftType = computeType(exp.left)
+				val rightType = computeType(exp.right)
+				if (leftType == Type.INT && rightType == Type.INT) {
+					return Type.INT
+				}
+				if (leftType == Type.BOOL && rightType == Type.BOOL) {
+					return Type.ERROR_BOOL_EXP
+				}
+				if (leftType != Type.INT && rightType != Type.INT) {
+					return Type.ERROR_SUBTRACTION
+				}
+				return Type.ERROR
+			}
+			Mult: {
+				val leftType = computeType(exp.left)
+				val rightType = computeType(exp.right)
+				if (leftType == Type.INT && rightType == Type.INT) {
+					return Type.INT
+				}
+				if (leftType == Type.BOOL && rightType == Type.BOOL) {
+					return Type.ERROR_BOOL_EXP
+				}
+				if (leftType != Type.INT && rightType != Type.INT) {
+					return Type.ERROR_MULTIPLICATIVE_OPERATORS
+				}
+				return Type.ERROR
+			}
+			Div: {
+				val leftType = computeType(exp.left)
+				val rightType = computeType(exp.right)
+				if (leftType == Type.INT && rightType == Type.INT) {
+					return Type.INT
+				}
+				if (leftType == Type.BOOL && rightType == Type.BOOL) {
+					return Type.ERROR_BOOL_EXP
+				}
+				if (leftType != Type.INT && rightType != Type.INT) {
+					return Type.ERROR_MULTIPLICATIVE_OPERATORS
+				}
+				return Type.ERROR
+			}
+			Number:
+				return Type.INT
+			Str:
+				return Type.STRING
+			Bool:
+				return Type.BOOL
+			PropertyReference: {
+				val referencedEntry = exp.ref
+
+				if (referencedEntry !== null) {
+					val entryExp = referencedEntry.type
+
+					if (entryExp instanceof IntConstraint) {
+						return Type.INT
+					} else if (entryExp instanceof StringConstraint) {
+						return Type.STRING
+					} else if (entryExp instanceof BoolConstraint) {
+						return Type.BOOL
+					} else if (entryExp instanceof IPConstraint) {
+						return Type.IP
+					}
+				}
+			}
+		}
+	}
 }
 
 /*
-config Server
-	property1: Int > 10 + 10
-	property2: String = "hello"
-	property3: Bool != false + 10
-	property4: IP >127.0.0.1
-	
-	property5: Int > property1 + 10 + "testing" + false
+ * config Server
+ * 	property1: Int > 10 + 10
+ * 	property2: String = "hello"
+ * 	property3: Bool != false + 10
+ * 	property4: IP >127.0.0.1
+ * 	
+ * 	property5: Int > property1 + 10 + "testing" + false
  */
- 
- 
- 
- 

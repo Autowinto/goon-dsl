@@ -24,18 +24,16 @@ Constraint:
 ;
 
 IntConstraint:
-    'Int' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=Expression)?
+    {IntConstraint} 'Int' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=Expression)?
 ;
 
 StringConstraint:
-    'String' (constraint=('!=' | '=') value=Expression)?
+    {StringConstraint} 'String' (constraint=('!=' | '=') value=Expression)?
 ;
 
 BoolConstraint:
-    'Bool' (constraint=('!=' | '=') value=Expression)?
+    {BoolConstraint} 'Bool' (constraint=('!=' | '=') value=Expression)?
 ;
-
-
 
 Expression:
 	Term (({Plus.left=current} '+' | {Minus.left=current} '-') right=Term)*
@@ -57,18 +55,18 @@ Str:
 	value=STRING
 ;
 
+// {Bool} Force Bool class to always be instantiated, 
+// since xtext match true/false keywords without instantiating the class otherwise
 Bool:
-	value='true' | 'false'
+	{Bool} value=('true' | 'false')
 ;
 
 PropertyReference:
 	ref=[Entry]
 ;
 
-
-
 IPConstraint:
-    'IP' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=TermIP)?
+    {IPConstraint} 'IP' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=TermIP)?
 ;
 
 
