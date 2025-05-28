@@ -27,7 +27,7 @@ public class MyDslScopeProvider extends AbstractDeclarativeScopeProvider {
         for (Entry topEntry : config.getEntries()) {
             QualifiedName topName = QualifiedName.create(topEntry.getName());
             descriptions.add(EObjectDescription.create(topName, topEntry));
-            // Add nested entries with qualified names
+
             addNestedDescriptions(topEntry, topEntry.getName(), descriptions);
         }
         
