@@ -10,48 +10,40 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.scoping.IScope;
-import org.eclipse.xtext.scoping.Scopes;
+import org.eclipse.xtext.resource.EObjectDescription;
+import org.eclipse.xtext.resource.IEObjectDescription;
 import org.eclipse.xtext.scoping.impl.AbstractDeclarativeScopeProvider;
-import org.eclipse.xtext.xbase.typesystem.internal.ExpressionScope.Scope;
+import org.eclipse.xtext.scoping.impl.SimpleScope;
 import org.xtext.example.mydsl.myDsl.Config;
 import org.xtext.example.mydsl.myDsl.Entry;
-import org.xtext.example.mydsl.myDsl.MyDslFactory;
-import org.xtext.example.mydsl.myDsl.MyDslPackage;
 
 public class MyDslScopeProvider extends AbstractDeclarativeScopeProvider {
 
 	@Override
 	public IScope getScope (EObject ctx, EReference ref) {
 		Config config = getConfig(ctx);
-		List<Entry> currentScopeEntries = new ArrayList<Entry>();
-		
-		currentScopeEntries.addAll(config.getEntries());
-		
-		for (Entry entry : config.getEntries()) {
-			addNestedEntries(entry, entry.getName(), currentScopeEntries);
-		}
-		return Scopes.scopeFor(currentScopeEntries);
-	}
+		List<IEObjectDescription> descriptions = new ArrayList<>();
+        
+        for (Entry topEntry : config.getEntries()) {
+            QualifiedName topName = QualifiedName.create(topEntry.getName());
+            descriptions.add(EObjectDescription.create(topName, topEntry));
+            // Add nested entries with qualified names
+            addNestedDescriptions(topEntry, topEntry.getName(), descriptions);
+        }
+        
+        return new SimpleScope(descriptions);
+    }
 	
-    private void addNestedEntries(Entry parent, String qualifiedPrefix, List<Entry> result) {
+    private void addNestedDescriptions(Entry parent, String qualifiedPrefix, List<IEObjectDescription> descriptions) {
         if (parent.getEntries() != null) {
             for (Entry child : parent.getEntries()) {
-                // Create a proxy entry that represents the qualified reference
-                Entry qualifiedEntry = createQualifiedProxy(child, qualifiedPrefix + "." + child.getName());
-                result.add(qualifiedEntry);
+                String qualifiedNameStr = qualifiedPrefix + "." + child.getName();
+                QualifiedName qualifiedName = QualifiedName.create(qualifiedNameStr.split("\\."));
+                descriptions.add(EObjectDescription.create(qualifiedName, child));
                 
-                // Recursively add nested entries
-                addNestedEntries(child, qualifiedPrefix + "." + child.getName(), result);
+                addNestedDescriptions(child, qualifiedNameStr, descriptions);
             }
         }
-    }
-    
-    private Entry createQualifiedProxy(Entry original, String qualifiedName) {
-        // Create a proxy that has the qualified name but points to the original entry
-        Entry proxy = MyDslFactory.eINSTANCE.createEntry();
-        proxy.setName(qualifiedName);
-        // Copy other relevant properties from original if needed
-        return proxy;
     }
 	
 	private Config getConfig(EObject ctx) {
