@@ -9,7 +9,7 @@ Config:
 ;
     
 Entry: 
-	name=ID':' (type=Exp | ref=[Entry|QualifiedName] | '{' entries+=Entry* '}')
+	name=ID':' (type=Exp | ref=[Entry] | '{' entries+=Entry* '}')
 ;    
     
 Exp: 

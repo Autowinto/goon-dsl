@@ -3,20 +3,63 @@
  */
 package org.xtext.example.mydsl.scoping;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EReference;
+import org.eclipse.xtext.naming.QualifiedName;
 import org.eclipse.xtext.scoping.IScope;
 import org.eclipse.xtext.scoping.Scopes;
+import org.eclipse.xtext.scoping.impl.AbstractDeclarativeScopeProvider;
 import org.eclipse.xtext.xbase.typesystem.internal.ExpressionScope.Scope;
 import org.xtext.example.mydsl.myDsl.Config;
 import org.xtext.example.mydsl.myDsl.Entry;
+import org.xtext.example.mydsl.myDsl.MyDslFactory;
 import org.xtext.example.mydsl.myDsl.MyDslPackage;
 
-public class MyDslScopeProvider extends AbstractMyDslScopeProvider {
+public class MyDslScopeProvider extends AbstractDeclarativeScopeProvider {
 
 	@Override
-	public IScope getScope (EObject context, EReference reference) {
-		return super.getScope(context, reference);
+	public IScope getScope (EObject ctx, EReference ref) {
+		Config config = getConfig(ctx);
+		List<Entry> currentScopeEntries = new ArrayList<Entry>();
+		
+		currentScopeEntries.addAll(config.getEntries());
+		
+		for (Entry entry : config.getEntries()) {
+			addNestedEntries(entry, entry.getName(), currentScopeEntries);
+		}
+		return Scopes.scopeFor(currentScopeEntries);
 	}
 	
+    private void addNestedEntries(Entry parent, String qualifiedPrefix, List<Entry> result) {
+        if (parent.getEntries() != null) {
+            for (Entry child : parent.getEntries()) {
+                // Create a proxy entry that represents the qualified reference
+                Entry qualifiedEntry = createQualifiedProxy(child, qualifiedPrefix + "." + child.getName());
+                result.add(qualifiedEntry);
+                
+                // Recursively add nested entries
+                addNestedEntries(child, qualifiedPrefix + "." + child.getName(), result);
+            }
+        }
+    }
+    
+    private Entry createQualifiedProxy(Entry original, String qualifiedName) {
+        // Create a proxy that has the qualified name but points to the original entry
+        Entry proxy = MyDslFactory.eINSTANCE.createEntry();
+        proxy.setName(qualifiedName);
+        // Copy other relevant properties from original if needed
+        return proxy;
+    }
+	
+	private Config getConfig(EObject ctx) {
+		EObject current = ctx;
+		
+		while (current != null && !(current instanceof Config)) {
+			current = current.eContainer();
+		}
+		return (Config) current;
+	}
 }
