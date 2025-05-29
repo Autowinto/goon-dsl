@@ -167,13 +167,11 @@ class HelperClass {
 					"intFromIP(\"" + exp.value + "\") );";
 			}
 		} else {
-			// Arithmetic or property reference at the top level
 			return "assertEquals(" + exp.compileArithmetic + ", Integer.parseInt(rootNode.findPath(\"" + entry.name +
 				"\").toString()));";
 		}
 	}
 
-// Helper for arithmetic and property reference expressions
 	static def String compileArithmetic(Object exp) {
 		switch exp {
 			Plus: {
@@ -202,24 +200,20 @@ class HelperClass {
 				}
 			}
 			PropertyReference: {
-				// Handle dotted property references - return the actual value, not a string
+				// fullPath is for handling dotted property references, meaning prop.nested1.etc
 				val fullPath = getFullPropertyPath(exp.ref)
 				return "rootNode.findPath(\"" + fullPath + "\").asText()"
 			}
 		}
 	}
 
-	// Helper method to build the full dotted path
 	static def String getFullPropertyPath(org.xtext.example.mydsl.myDsl.Entry entry) {
 		val path = new StringBuilder()
 		var current = entry
 		val pathParts = newArrayList()
 
-		// Build path from the entry reference
 		pathParts.add(current.name)
 
-		// For nested references like "database.nested1.nested2", 
-		// we need to build the full JSON path
 		return pathParts.join(".")
 	}
 }
