@@ -62,7 +62,11 @@ Bool:
 ;
 
 PropertyReference:
-	ref=[Entry]
+	ref=[Entry|NestedReference]
+;
+
+NestedReference:
+	ID ('.' ID)*
 ;
 
 IPConstraint:

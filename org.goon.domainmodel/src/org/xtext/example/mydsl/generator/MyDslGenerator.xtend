@@ -23,7 +23,6 @@ import org.xtext.example.mydsl.myDsl.Div
 import org.xtext.example.mydsl.myDsl.Bool
 import org.xtext.example.mydsl.myDsl.PropertyReference
 
-
 /**
  * Generates code from your model files on save.
  * 
@@ -38,73 +37,73 @@ class MyDslGenerator extends AbstractGenerator {
 	}
 
 	def compile(Config root) '''
-			package ConfigTests;
-			
-			import com.fasterxml.jackson.databind.JsonNode;
-			import com.fasterxml.jackson.databind.ObjectMapper;
-			import org.junit.jupiter.api.Test;
-			import static org.junit.jupiter.api.Assertions.*;
-			
-			import java.io.File;
-			import java.io.IOException;
-			
-			public class «root.name» {
-				File jsonFile = new File("src/config.json");
-				ObjectMapper objectMapper = new ObjectMapper();
-				JsonNode rootNode;
-				{
-					try {
-						rootNode = objectMapper.readTree(jsonFile);
-					} catch (IOException e) {
-						throw new RuntimeException(e);
-					}
+		package ConfigTests;
+		
+		import com.fasterxml.jackson.databind.JsonNode;
+		import com.fasterxml.jackson.databind.ObjectMapper;
+		import org.junit.jupiter.api.Test;
+		import static org.junit.jupiter.api.Assertions.*;
+		
+		import java.io.File;
+		import java.io.IOException;
+		
+		public class «root.name» {
+			File jsonFile = new File("src/config.json");
+			ObjectMapper objectMapper = new ObjectMapper();
+			JsonNode rootNode;
+			{
+				try {
+					rootNode = objectMapper.readTree(jsonFile);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
 				}
-				
-				@Test
-				public void testConfigJsonStructure() throws IOException {
-					assertNotNull(rootNode);
-					«FOR entry : root.entries»
-						assertTrue(rootNode.has("«entry.name»"));
-						«IF !entry.entries.empty»
-							JsonNode «entry.name» = rootNode.get("«entry.name»");
-							«HelperClass.generateAssertions(entry, entry.name)»
-						«ENDIF»
-					«ENDFOR»
-				}
+			}
+			
+			@Test
+			public void testConfigJsonStructure() throws IOException {
+				assertNotNull(rootNode);
 				«FOR entry : root.entries»
+					assertTrue(rootNode.has("«entry.name»"));
 					«IF !entry.entries.empty»
-						«HelperClass.generateTests(entry)»
-					«ELSE»	
+						JsonNode «entry.name» = rootNode.get("«entry.name»");
+						«HelperClass.generateAssertions(entry, entry.name)»
+					«ENDIF»
+				«ENDFOR»
+			}
+			«FOR entry : root.entries»
+				«IF !entry.entries.empty»
+					«HelperClass.generateTests(entry)»
+				«ELSE»	
 					
 					@Test
 					public void test«entry.name»() throws IOException {
 								«HelperClass.compileExp(entry.type, entry)»
 					}
-					«ENDIF»
-				«ENDFOR»
-				
-				
-				public static double intFromIP(String ip) {
-					ip = ip.replaceAll("^\"|\"$", "");
-					String[] IPParts = ip.split("\\.");
-					String doubleString = "";
-					for (String part : IPParts) {
-						if (part.length() == 3) {
-							doubleString += part;
-						} else {
-							String newPart = part;
-							int len = newPart.length();
-							while (len < 3) {
-								newPart = "0" + newPart;
-								len = newPart.length();
-							}
-							doubleString += newPart;
+				«ENDIF»
+			«ENDFOR»
+			
+			
+			public static double intFromIP(String ip) {
+				ip = ip.replaceAll("^\"|\"$", "");
+				String[] IPParts = ip.split("\\.");
+				String doubleString = "";
+				for (String part : IPParts) {
+					if (part.length() == 3) {
+						doubleString += part;
+					} else {
+						String newPart = part;
+						int len = newPart.length();
+						while (len < 3) {
+							newPart = "0" + newPart;
+							len = newPart.length();
 						}
+						doubleString += newPart;
 					}
-					return Double.parseDouble(doubleString);
 				}
+				return Double.parseDouble(doubleString);
 			}
-		'''
+		}
+	'''
 }
 
 class HelperClass {
@@ -136,10 +135,10 @@ class HelperClass {
 			return exp.left.compileExp(entry) + "\n" + exp.right.compileExp(entry);
 		} else if (exp instanceof StringConstraint) {
 			if (exp.constraint.equals('=')) {
-				return "assertEquals(\"" + exp.value.compileArithmetic + "\", rootNode.findPath(\"" + entry.name +
+				return "assertEquals(" +exp.value.compileArithmetic + ", rootNode.findPath(\"" + entry.name +
 					"\").asText());";
 			} else if (exp.constraint.equals('!=')) {
-				return "assertNotEquals(\"" + exp.value.compileArithmetic + "\", rootNode.findPath(\"" + entry.name +
+				return "assertNotEquals(" + exp.value.compileArithmetic + ", rootNode.findPath(\"" + entry.name +
 					"\").toString());";
 			}
 		} else if (exp instanceof IntConstraint) {
@@ -156,7 +155,8 @@ class HelperClass {
 				return "assertEquals(\"" + exp.value.compileArithmetic + "\", rootNode.findPath(\"" + entry.name +
 					"\").toString());";
 			} else if (exp.constraint.equals('!=')) {
-				return "assertNotEquals(\"" + exp.value.compileArithmetic + "\", rootNode.findPath(\"" + entry.name + "\").toString());";
+				return "assertNotEquals(\"" + exp.value.compileArithmetic + "\", rootNode.findPath(\"" + entry.name +
+					"\").toString());";
 			}
 		} else if (exp instanceof IPConstraint) {
 			if (exp.constraint.equals('=')) {
@@ -177,9 +177,10 @@ class HelperClass {
 	static def String compileArithmetic(Object exp) {
 		switch exp {
 			Plus: {
-				if (exp.left instanceof org.xtext.example.mydsl.myDsl.Str && exp.right instanceof org.xtext.example.mydsl.myDsl.Str) {					
+				if (exp.left instanceof org.xtext.example.mydsl.myDsl.Str &&
+					exp.right instanceof org.xtext.example.mydsl.myDsl.Str) {
 					return compileArithmetic(exp.left) + compileArithmetic(exp.right)
-				} 
+				}
 				return compileArithmetic(exp.left) + " + " + compileArithmetic(exp.right)
 			}
 			Minus:
@@ -191,7 +192,7 @@ class HelperClass {
 			org.xtext.example.mydsl.myDsl.Number:
 				return exp.value.toString
 			org.xtext.example.mydsl.myDsl.Str:
-				return exp.value
+				return "\"" + exp.value + "\""
 			Bool: {
 				val value = exp.value
 				if (value == "true") {
@@ -200,8 +201,25 @@ class HelperClass {
 					return "False"
 				}
 			}
-			PropertyReference:
-				return "Integer.parseInt(rootNode.findPath(\"" + exp.ref.name + "\").toString())"
+			PropertyReference: {
+				// Handle dotted property references - return the actual value, not a string
+				val fullPath = getFullPropertyPath(exp.ref)
+				return "rootNode.findPath(\"" + fullPath + "\").asText()"
+			}
 		}
+	}
+
+	// Helper method to build the full dotted path
+	static def String getFullPropertyPath(org.xtext.example.mydsl.myDsl.Entry entry) {
+		val path = new StringBuilder()
+		var current = entry
+		val pathParts = newArrayList()
+
+		// Build path from the entry reference
+		pathParts.add(current.name)
+
+		// For nested references like "database.nested1.nested2", 
+		// we need to build the full JSON path
+		return pathParts.join(".")
 	}
 }
