@@ -10,21 +10,82 @@ import org.eclipse.xtext.testing.util.ParseHelper
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.^extension.ExtendWith
-import org.xtext.example.mydsl.myDsl.Model
+import org.xtext.example.mydsl.myDsl.Config
+import org.eclipse.xtext.testing.validation.ValidationTestHelper
+import org.xtext.example.mydsl.myDsl.MyDslPackage
+import org.xtext.example.mydsl.myDsl.IntConstraint
+import org.xtext.example.mydsl.myDsl.Div
+import org.xtext.example.mydsl.validation.MyDslValidator
+import org.xtext.example.mydsl.myDsl.StringConstraint
+import org.xtext.example.mydsl.myDsl.Plus
+import org.xtext.example.mydsl.myDsl.BoolConstraint
 
 @ExtendWith(InjectionExtension)
 @InjectWith(MyDslInjectorProvider)
 class MyDslParsingTest {
-	@Inject
-	ParseHelper<Model> parseHelper
+	@Inject extension ParseHelper<Config> 
+	@Inject extension ValidationTestHelper
 	
 	@Test
-	def void loadModel() {
-		val result = parseHelper.parse('''
-			Hello Xtext!
-		''')
+	def void configTest() {
+		val result = '''
+			config Server
+		'''.parse
 		Assertions.assertNotNull(result)
 		val errors = result.eResource.errors
-		Assertions.assertTrue(errors.isEmpty, '''Unexpected errors: «errors.join(", ")»''')
+		Assertions.assertTrue(errors.isEmpty)
+	}
+	
+	@Test
+	def void propertyTypes() {
+		val result = '''
+			config Server
+			property1: Int
+			property2: String
+			property2: Bool
+			property2: IP
+		'''.parse
+		Assertions.assertNotNull(result)
+		val errors = result.eResource.errors
+		Assertions.assertTrue(errors.isEmpty)
+	}
+	
+	@Test
+	def void propertyRequired() {
+		val result = '''
+			config Server
+			property1: Int
+			property2: requires property1
+		'''.parse
+		Assertions.assertNotNull(result)
+		val errors = result.eResource.errors
+		Assertions.assertTrue(errors.isEmpty)
+	}
+	
+	@Test
+	def void expressions() {
+		val result = '''
+			config Server
+			property1: Int = 10 + 20
+			property2: Int = 10 - 20
+			property3: Int = 10 * 20
+			property4: Int = 10 / 20
+			property5: String = "hello" + "world"
+		'''.parse
+		
+		result.assertNoIssues
+		result.assertNoErrors
+	}
+	
+	@Test
+	def void referencePropertiesInExpressions() {
+		val result = '''
+			config Server
+			property1: Int = 10 + 20
+			property2: Int = 10 + property1
+		'''.parse
+		
+		result.assertNoIssues
+		result.assertNoErrors
 	}
 }

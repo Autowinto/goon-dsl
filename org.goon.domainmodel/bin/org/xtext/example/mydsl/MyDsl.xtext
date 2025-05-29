@@ -11,7 +11,7 @@ Entry:
 ;    
     
 
-Exp: 
+Exp:
 	Constraint ({And.left=current} '&&' right=Exp)?
 ;
     
@@ -24,19 +24,53 @@ Constraint:
 ;
 
 IntConstraint:
-    'Int' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=INT)?
+    {IntConstraint} 'Int' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=Expression)?
 ;
 
 StringConstraint:
-    'String' (constraint=('!=' | '=') value=STRING)?
+    {StringConstraint} 'String' (constraint=('!=' | '=') value=Expression)?
 ;
 
 BoolConstraint:
-    'Bool' (constraint=('!=' | '=') value=('true' | 'false'))?
+    {BoolConstraint} 'Bool' (constraint=('!=' | '=') value=Expression)?
+;
+
+Expression:
+	Term (({Plus.left=current} '+' | {Minus.left=current} '-') right=Term)*
+;
+
+Term:
+	Primary (({Mult.left=current} '*' | {Div.left=current} '/') right=Primary)*
+;
+
+Primary:
+	Number | Str | Bool | PropertyReference
+;
+
+Number:
+	value=INT
+;
+
+Str:
+	value=STRING
+;
+
+// {Bool} Force Bool class to always be instantiated, 
+// since xtext match true/false keywords without instantiating the class otherwise
+Bool:
+	{Bool} value=('true' | 'false')
+;
+
+PropertyReference:
+	ref=[Entry|NestedReference]
+;
+
+NestedReference:
+	ID ('.' ID)*
 ;
 
 IPConstraint:
-    'IP' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=TermIP)?
+    {IPConstraint} 'IP' (constraint=('<' | '>' | '<=' | '>=' | '!=' | '=') value=TermIP)?
 ;
 
 
