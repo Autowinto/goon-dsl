@@ -13,4 +13,3 @@ public class MyDslStandaloneSetup extends MyDslStandaloneSetupGenerated {
         return new MyDslStandaloneSetup().createInjectorAndDoEMFRegistration();
     }
 }
-
