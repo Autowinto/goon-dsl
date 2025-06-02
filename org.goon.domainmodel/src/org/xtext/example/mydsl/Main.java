@@ -30,7 +30,7 @@ public class Main {
         	Injector injector = MyDslStandaloneSetup.doSetup();// Create injector and get ResourceSet
             ResourceSet resourceSet = injector.getInstance(ResourceSet.class);
 
-            // Load DSL resource with the registered resource factory
+            // Load DSL resource with registered resource factory
             Resource resource = resourceSet.getResource(URI.createFileURI(dslFile.getAbsolutePath()), true);
             resource.load(null);  // load with no options
 
