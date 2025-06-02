@@ -9,7 +9,7 @@ import java.nio.file.Paths
 import java.nio.charset.StandardCharsets
 
 class SimpleFileSystemAccess implements IFileSystemAccess2 {
-
+	//Implementaion of generateFile method. Before this used the Eclipse imp, but had to implement myself when using a jar file outside Eclipse
     override void generateFile(String fileName, CharSequence contents) {
     val outFile = new File(fileName)
     Files.write(Paths.get(outFile.absolutePath), contents.toString.getBytes(StandardCharsets.UTF_8))
