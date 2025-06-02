@@ -3,13 +3,14 @@
  */
 package org.xtext.example.mydsl;
 
+import com.google.inject.Injector;
 
 /**
  * Initialization support for running Xtext languages without Equinox extension registry.
  */
 public class MyDslStandaloneSetup extends MyDslStandaloneSetupGenerated {
-
-	public static void doSetup() {
-		new MyDslStandaloneSetup().createInjectorAndDoEMFRegistration();
-	}
+    public static Injector doSetup() {
+        return new MyDslStandaloneSetup().createInjectorAndDoEMFRegistration();
+    }
 }
+
